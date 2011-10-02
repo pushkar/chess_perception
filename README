@@ -1,0 +1,66 @@
+Chess_perception
+---------------------
+
+TODO
+-------------
+l2 norm penalties for filtering ground
+l2 norm penalties while clustering
+look within a square for the chess piece
+Add checks to find if we should really look for a fallen piece or not (Game turn)
+
+Calibration
+-------------
+
+
+
+Compile and Run
+-------------
+cd Debug;
+make;
+./chess_perception
+
+ACH Channels
+-------------
+
+* Summary *
+
+Name: chess_perception
+1. Somatic__Token->iattr
+boardstate[64 + NUMBER_OF_FALLEN+1]
+
+The first 64 elements are encoded as per the craft board.  After that,
+a value of 1 indicates that there is a fallen piece.
+
+2. Somatic__Token->fattr
+double[(64 + NUMBER_OF_FALLEN+1)*4] in camera ref
+
+Contains offsets of each piece The offset is calculated from the
+original initialization of the chessboard.  The 4th element specifies
+orientation.  For the first 64 elements, the offset is relative to the
+square.  After the first 64 elements, the offset is relative to the
+center of the board.
+
+* Details *
+
+There are two vectors (one integer - iattr and one floating - fattr)
+Since you cannot encode offsets and orientation in iattr, they are in fattr
+
+For the 64 squares on the board, this is when pieces are nicely placed on the board.
+Then each iattr[i] will say if there is a piece in the square. 
+If there is a piece it will say which piece according to:
+Pawn as 1, Knight 2, Bishop 3, Rook 4, Queen 5 and King 6.
+
+For each piece, 
+fattr[i*4+0] = x offset
+fattr[i*4+1] = y offset
+fattr[i*4+2] = z offset from chessboard
+fattr[i*4+3] = orientation around Z axis
+
+It compares the board state with Crafty
+--------------------------------------------
+If there is a piece missing, it tries to find fallen pieces. 
+If there is one fallen piece iattr[64] will be 1 and then iattr[65] = 0. 
+for two fallen pieces, iattr[64] = iattr[65] = 1 and iattr[66] = 0.
+
+Corresponding to each piece, fattr will have offsets and orientation.
+BUT, the offset will be reported from the center of the board.
