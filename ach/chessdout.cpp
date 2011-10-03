@@ -54,9 +54,9 @@ int ach_move_init() {
   craftyo_message = (Somatic__Crafty*)malloc(sizeof(Somatic__Crafty));
   if(craftyo_message == NULL) return 0;
   somatic__crafty__init(craftyo_message);
-  craftyo_message->boardstate.data = (uint8_t*) malloc(128);
-  craftyo_message->has_boardstate = 1;
-  craftyo_message->boardstate.len = 128;
+  //craftyo_message->boardstate.data = (uint8_t*) malloc(128);
+  //craftyo_message->has_boardstate = 1;
+  //craftyo_message->boardstate.len = 128;
   craftyo_message->move = (char*)malloc(10);
 
   printf("ACH: Info\n"
@@ -78,7 +78,7 @@ void ach_move_close() {
   int r = ach_close(craftyo_chan);
   if(r != ACH_OK)
 	  printf("ACH: %s\n", ach_result_to_string((ach_status_t)r));
-  free(craftyo_message->boardstate.data);
+  //free(craftyo_message->boardstate.data);
   free(craftyo_message->move);
   free(craftyo_message);
 }
