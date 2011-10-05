@@ -18,6 +18,7 @@
 #define LOG 1
 #define READ 2
 #define FILENAME "/home/bluebot/Desktop/exp1.dat"
+#define MESA_IP "192.168.1.42"
 
 int state = LIVE;
 double alpha = 0.1f;  // value near 0 for less noise
@@ -366,13 +367,13 @@ main(int argc, char* argv[])
 	ach_initialize();
 	switch (state) {
 		case LIVE:
-			if(1 == mesa_init_device("192.168.1.30"))
+			if(1 == mesa_init_device(MESA_IP))
 					printf("Mesa Ranger initialized\n");
 			frame = mesa_init_frame();
 			frame_last = mesa_init_frame();
 			break;
 		case LOG:
-			if(1 == mesa_init_device("192.168.1.30"))
+			if(1 == mesa_init_device(MESA_IP))
 					printf("Mesa Ranger initialized\n");
 			frame = mesa_init_frame();
 			frame_last = mesa_init_frame();

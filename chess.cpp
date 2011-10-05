@@ -89,12 +89,12 @@ void compare_with_crafty(int min_weight) {
 	for(int n = 0; n < 64; n++) {
 		int c = 63-n;
 		 if(crafty_board_state[c] != 0 && chessboard[n].weight() > min_weight) {
-			 printf(" %2d  ", crafty_board_state[c]);
+			 printf(" %2Ld  ", crafty_board_state[c]);
 		 }
 		 else if(crafty_board_state[c] != 0 && chessboard[n].weight() < min_weight) {
 			 miss = c;
 			 n_miss++;
-			 printf(" %2d| ", crafty_board_state[c]);
+			 printf(" %2Ld| ", crafty_board_state[c]);
 		 }
 		 else if(crafty_board_state[c] == 0 && chessboard[n].weight() > min_weight) {
 			 newp = c;
