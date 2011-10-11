@@ -202,9 +202,9 @@ mesa_init_frame() {
 	frame.cloud_size = sz_frame * 3;
 
 	if(_srccam_init == 0) {
+		frame.distance = (unsigned char*) malloc(frame.img_size);
 		frame.amplitude = (unsigned char*) malloc(frame.img_size);
 		frame.confidence = (unsigned char*) malloc(frame.img_size);
-		frame.distance = (unsigned char*) malloc(frame.img_size);
 	}
 
 	assert(frame.x);

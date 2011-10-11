@@ -18,9 +18,9 @@ void chessboard_add_point(float x, float y, float z) {
 	_point_t p(x, y, z);
 	uint i = 0;
 	for(i = 0; i < 64; i++) {
-		if(chessboard[i].near_pointcloud(p, 0.03)) {
+		if(chessboard[i].near_pointcloud(p, 0.055/2.0)) {
 		//if(p.distance(chessboard[i].mean) < 0.045) {
-			if(crafty_board_state[i] == 0) continue;
+			//if(crafty_board_state[i] == 0) continue;
 			chessboard[i].add_point(p, len_max);
 			return;
 		}

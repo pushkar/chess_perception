@@ -18,12 +18,14 @@
 #define LOG 1
 #define READ 2
 #define FILENAME "/home/bluebot/Desktop/exp1.dat"
-#define MESA_IP "192.168.1.42"
+#define MESA_IP "192.168.1.30"
+#define MESA_IP_2 "192.168.1.42"
+#define WC 0.057 // width of chessboard square
 
 int state = LIVE;
 double alpha = 0.1f;  // value near 0 for less noise
-double len_max = 0.953; // 71
-double len_min = 0.903;
+double len_max = 1.203;
+double len_min = 1.12;
 double bx_max, bx_min, by_max, by_min;
 int _init_chessboard_done = 0;
 int opt_images = 0;
@@ -33,10 +35,10 @@ int opt_b = 1;
 int opt_B = 0;
 
 int count_loop = 0;
-const int min_weight = 5;
+const int min_weight = 4;
+const int frame_last = 5;
 
-mesa_t frame;
-mesa_t frame_last;
+mesa_t frame[5];
 IplImage* img_distance;
 IplImage* img_amplitude;
 IplImage* img_confidence;
@@ -50,7 +52,8 @@ void
 _end()
 {
 	usleep(1000);
-	mesa_release_frame(&frame);
+	for(int i = 0; i < frame_last; i++)
+		mesa_release_frame(&frame[i]);
 	cvReleaseImage(&img_distance);
 	cvReleaseImage(&img_amplitude);
 	cvReleaseImage(&img_confidence);
@@ -103,9 +106,9 @@ _keyboard(unsigned char key)
 			break;
 		}
 		sprintf(str, "img_amp_%d.jpg", _count);
-		img = cvCreateImage(cvSize(frame.cols, frame.rows), IPL_DEPTH_8U, 1);
-		for(int j = 0; j < frame.len; j++)
-			memcpy(img->imageData+j, frame.amplitude+j*2+1, 1);
+		img = cvCreateImage(cvSize(frame[0].cols, frame[0].rows), IPL_DEPTH_8U, 1);
+		for(int j = 0; j < frame[0].len; j++)
+			memcpy(img->imageData+j, frame[0].amplitude+j*2+1, 1);
 		printf("Saving image\n");
 		cvSaveImage(str, img);
 		cvReleaseImage(&img);
@@ -194,9 +197,8 @@ void get_frame(mesa_t *fr) {
 // This is literally hard coded. Hopefully it makes sense.
 // This function tries to initialize the centers of each chessboard square
 // Input is the center of chess board
-#define WC 0.057 // width of chessboard square
 void _init_chessboard(double x, double y, double z) {
-	if(_init_chessboard_done == 1) return;
+	//if(_init_chessboard_done == 1) return;
 
 	for(int i = -4; i < 4; i++) {
 		double xi = i*WC;
@@ -225,19 +227,22 @@ _draw() {
 	glEnable(GL_POINT_SMOOTH);
 	glPointSize(1.0f);
 
-	get_frame(&frame);
+	for(int i = frame_last; i > 0; i--) {
+		mesa_dup_frame(&frame[i], frame[i-1]);
+	}
+	get_frame(&frame[0]);
 	ach_crafty_read();
 
 	// smooth and show images
 	if(opt_images) {
-		img_distance->imageData = (char*) frame.distance;
-		img_amplitude->imageData = (char*) frame.amplitude;
-		img_confidence->imageData = (char*) frame.confidence;
+		img_distance->imageData = (char*) frame[0].distance;
+		img_amplitude->imageData = (char*) frame[0].amplitude;
+		img_confidence->imageData = (char*) frame[0].confidence;
 
 		cvSmooth(img_distance, img_distance, CV_MEDIAN, 3, 0, 0, 0);
 
-		for(int j = 0; j < frame.len-1; j++) {
-			memcpy(img_amplitude_l->imageData+j, frame.amplitude+j*2+1, 1);
+		for(int j = 0; j < frame[0].len-1; j++) {
+			memcpy(img_amplitude_l->imageData+j, frame[0].amplitude+j*2+1, 1);
 		}
 
 		cvResize(img_amplitude_l, img_amplitude_L, CV_INTER_CUBIC);
@@ -250,10 +255,10 @@ _draw() {
 
 	chessboard_clear();
 
-	int i = frame.rows/2.0;
-	int j = frame.cols/2.0;
-	int n = i * frame.cols + j;
-	_init_chessboard(frame.x[n], frame.y[n], len_max);
+	int i = frame[0].rows/2.0;
+	int j = frame[0].cols/2.0;
+	int n = i * frame[0].cols + j;
+	_init_chessboard(frame[0].x[n], frame[0].y[n], len_max);
 
 	glPushMatrix();
 	glColor3f(0.3f, 0.3f, 0.3f);
@@ -261,30 +266,42 @@ _draw() {
 	glBegin(GL_POINTS);
 	n = 0;
 	obstacles = 0;
-	for (int i = 0; i < frame.rows; i++) {
-		for (int j = 0; j < frame.cols; j++) {
-			n = i * frame.cols + j;
 
-			frame.x[n] = alpha * frame.x[n] + (1 - alpha) * frame_last.x[n];
-			frame.y[n] = alpha * frame.y[n] + (1 - alpha) * frame_last.y[n];
-			frame.z[n] = alpha * frame.z[n] + (1 - alpha) * frame_last.z[n];
+	for(int i = 0; i < frame[0].rows; i++) {
+		for(int j = 0; j < frame[0].cols; j++) {
+			n = i * frame[0].cols + j;
+			frame[0].x[n] = alpha * frame[0].x[n] + (1 - alpha) * frame[1].x[n];
+			frame[0].y[n] = alpha * frame[0].y[n] + (1 - alpha) * frame[1].y[n];
+			frame[0].z[n] = alpha * frame[0].z[n] + (1 - alpha) * frame[1].z[n];
+		}
+	}
 
-			double len = frame.z[n];
+	for (int i = 0; i < frame_last; i++) {
+		for (int j = 0; j < frame[i].rows; j++) {
+			for (int k = 0; k < frame[i].cols; k++) {
+				n = j * frame[i].cols + k;
+				double len = frame[i].z[n];
 
-			float c = (len - len_min)/(len_max - len_min);
-			glColor3f(0.0f, c, 0.1f);
-			skip = 0;
+				float c = (len - len_min) / (len_max - len_min);
+				glColor3f(0.0f, c, 0.1f);
+				skip = 0;
 
-			if(frame.z[n] < len_min) { obstacles++; glColor3f(0.0f, 0.0f, 0.0f); skip = 1; continue; }
-			if(frame.z[n] > len_max) continue;
-			if(frame.x[n] > bx_max) continue;
-			if(frame.x[n] < bx_min) continue;
-			if(frame.y[n] > by_max) continue;
-			if(frame.y[n] < by_min) continue;
+				if (frame[i].z[n] < len_min) {
+					obstacles++;
+					glColor3f(0.0f, 0.0f, 0.0f);
+					skip = 1;
+					continue;
+				}
+				if (frame[i].z[n] > len_max) continue;
+				if (frame[i].x[n] > bx_max) continue;
+				if (frame[i].x[n] < bx_min) continue;
+				if (frame[i].y[n] > by_max) continue;
+				if (frame[i].y[n] < by_min) continue;
 
-			if(skip == 0) chessboard_add_point(frame.x[n], frame.y[n], frame.z[n]);
+				if (skip == 0) chessboard_add_point(frame[i].x[n], frame[i].y[n], frame[i].z[n]);
 
-			if(opt_c) cloud_drawpoint(frame.x[n], frame.y[n], frame.z[n]);
+				if (opt_c) cloud_drawpoint(frame[i].x[n], frame[i].y[n], frame[i].z[n]);
+			}
 		}
 	}
 	glEnd();
@@ -347,13 +364,12 @@ _draw() {
 	}
 
 	glPointSize(1.0f);
-	cloud_findorientation_and_draw();
+	// cloud_findorientation_and_draw();
 
 	if(opt_b) cloud_draw_piece_means();
 	if(opt_v) cloud_draw_chessboard_means();
 	if(opt_B) { cloud_pout(); opt_B = 0; }
 
-	mesa_dup_frame(&frame_last, frame);
 	count_loop++;
 	if(obstacles > 3000) _reset();
 }
@@ -368,34 +384,52 @@ main(int argc, char* argv[])
 	switch (state) {
 		case LIVE:
 			if(1 == mesa_init_device(MESA_IP))
-					printf("Mesa Ranger initialized\n");
-			frame = mesa_init_frame();
-			frame_last = mesa_init_frame();
+					printf("Mesa Ranger initialized at %s\n", MESA_IP);
+			else {
+				mesa_init_device(MESA_IP_2);
+				printf("Mesa Ranger initialized at %s\n", MESA_IP_2);
+			}
+
+			for(int i = 0; i < frame_last; i++) {
+				frame[i] = mesa_init_frame();
+			}
+
 			break;
 		case LOG:
 			if(1 == mesa_init_device(MESA_IP))
-					printf("Mesa Ranger initialized\n");
-			frame = mesa_init_frame();
-			frame_last = mesa_init_frame();
-			logwrite_init(FILENAME, frame);
+					printf("Mesa Ranger initialized at %s\n", MESA_IP);
+			else {
+				mesa_init_device(MESA_IP_2);
+				printf("Mesa Ranger initialized at %s\n", MESA_IP_2);
+			}
+
+			for(int i = 0; i < frame_last; i++) {
+				frame[i] = mesa_init_frame();
+				logwrite_init(FILENAME, frame[i]);
+			}
+
 		break;
 		case READ:
-			frame = mesa_init_frame();
-			frame_last = mesa_init_frame();
-			logread_init(FILENAME, frame);
+			for(int i = 0; i < frame_last; i++) {
+				frame[i] = mesa_init_frame();
+				logread_init(FILENAME, frame[i]);
+			}
 			break;
 	}
 
-	img_distance = cvCreateImage(cvSize(frame.cols, frame.rows), IPL_DEPTH_16U, 1);
-	img_amplitude = cvCreateImage(cvSize(frame.cols, frame.rows), IPL_DEPTH_16U, 1);
-	img_confidence = cvCreateImage(cvSize(frame.cols, frame.rows), IPL_DEPTH_16U, 1);
-	img_amplitude_l = cvCreateImage(cvSize(frame.cols, frame.rows), IPL_DEPTH_8U, 1);
-	img_amplitude_L = cvCreateImage(cvSize(frame.cols*3, frame.rows*3), IPL_DEPTH_8U, 1);
+	img_distance = cvCreateImage(cvSize(frame[0].cols, frame[0].rows), IPL_DEPTH_16U, 1);
+	img_amplitude = cvCreateImage(cvSize(frame[0].cols, frame[0].rows), IPL_DEPTH_16U, 1);
+	img_confidence = cvCreateImage(cvSize(frame[0].cols, frame[0].rows), IPL_DEPTH_16U, 1);
+	img_amplitude_l = cvCreateImage(cvSize(frame[0].cols, frame[0].rows), IPL_DEPTH_8U, 1);
+	img_amplitude_L = cvCreateImage(cvSize(frame[0].cols*3, frame[0].rows*3), IPL_DEPTH_8U, 1);
 	cvNamedWindow("Amplitude", 1);
 
-	get_frame(&frame);
-	get_frame(&frame_last);
-	mesa_dup_frame(&frame_last, frame);
+	for(int i = 0; i < frame_last; i++) {
+		printf("Grabbing %d\n", i);
+		get_frame(&frame[i]);
+		printf("Grabbed %d\n", i);
+		usleep(100);
+	}
 
 	gl_init(argc, argv, "Chess Perception", 800, 600);
 	glutMainLoop();
