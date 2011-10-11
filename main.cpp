@@ -38,7 +38,8 @@ int count_loop = 0;
 const int min_weight = 4;
 const int frame_last = 5;
 
-mesa_t frame[5];
+mesa_t frame_init;
+mesa_t frame[frame_last];
 IplImage* img_distance;
 IplImage* img_amplitude;
 IplImage* img_confidence;
@@ -227,10 +228,14 @@ _draw() {
 	glEnable(GL_POINT_SMOOTH);
 	glPointSize(1.0f);
 
-	for(int i = frame_last; i > 0; i--) {
+	get_frame(&frame_init);
+
+	for(int i = frame_last - 1; i > 0; i--) {
 		mesa_dup_frame(&frame[i], frame[i-1]);
 	}
-	get_frame(&frame[0]);
+
+	mesa_dup_frame(&frame[0], frame_init);
+
 	ach_crafty_read();
 
 	// smooth and show images
@@ -238,7 +243,6 @@ _draw() {
 		img_distance->imageData = (char*) frame[0].distance;
 		img_amplitude->imageData = (char*) frame[0].amplitude;
 		img_confidence->imageData = (char*) frame[0].confidence;
-
 		cvSmooth(img_distance, img_distance, CV_MEDIAN, 3, 0, 0, 0);
 
 		for(int j = 0; j < frame[0].len-1; j++) {
@@ -424,13 +428,16 @@ main(int argc, char* argv[])
 	img_amplitude_L = cvCreateImage(cvSize(frame[0].cols*3, frame[0].rows*3), IPL_DEPTH_8U, 1);
 	cvNamedWindow("Amplitude", 1);
 
+	frame_init = mesa_init_frame();
+	get_frame(&frame_init);
+
 	for(int i = 0; i < frame_last; i++) {
-		printf("Grabbing %d\n", i);
-		get_frame(&frame[i]);
-		printf("Grabbed %d\n", i);
+		printf("%d\n", i);
+		mesa_dup_frame(&frame[i], frame_init);
 		usleep(100);
 	}
 
+	printf("Entering MainLoop\n");
 	gl_init(argc, argv, "Chess Perception", 800, 600);
 	glutMainLoop();
 	_end();
