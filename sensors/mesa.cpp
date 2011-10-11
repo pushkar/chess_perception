@@ -201,11 +201,12 @@ mesa_init_frame() {
 	frame.img_size = frame.len * sizeof(uint16_t);
 	frame.cloud_size = sz_frame * 3;
 
-//	if(_srccam_init == 0) {
+	//if(_srccam_init == 0) {
 		frame.distance = (unsigned char*) malloc(frame.img_size);
 		frame.amplitude = (unsigned char*) malloc(frame.img_size);
 		frame.confidence = (unsigned char*) malloc(frame.img_size);
-//	}
+	//}
+	// This probably causes a memory leak,  but this needs to be done when you use an array of mesa_t frames.
 
 	assert(frame.x);
 	assert(frame.y);

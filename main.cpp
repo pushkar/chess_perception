@@ -22,9 +22,9 @@
 #define MESA_IP_2 "192.168.1.42"
 #define WC 0.057 // width of chessboard square
 
-int state = LIVE;
-double alpha = 0.1f;  // value near 0 for less noise
-double len_max = 1.203;
+int state = LOG;
+double alpha = 0.05f;  // value near 0 for less noise
+double len_max = 1.20;
 double len_min = 1.12;
 double bx_max, bx_min, by_max, by_min;
 int _init_chessboard_done = 0;
@@ -35,7 +35,7 @@ int opt_b = 1;
 int opt_B = 0;
 
 int count_loop = 0;
-const int min_weight = 4;
+const int min_weight = 10;
 const int frame_last = 5;
 
 mesa_t frame_init;
@@ -432,7 +432,6 @@ main(int argc, char* argv[])
 	get_frame(&frame_init);
 
 	for(int i = 0; i < frame_last; i++) {
-		printf("%d\n", i);
 		mesa_dup_frame(&frame[i], frame_init);
 		usleep(100);
 	}
